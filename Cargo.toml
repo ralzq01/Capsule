@@ -1,0 +1,8 @@
+[package]
+name = "watcherdo"
+version = "0.1.0"
+authors = ["zhiqi lin <ralzq01@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+notify = "4.0.0"
