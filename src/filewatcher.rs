@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 pub struct FileWatcher {
-  recver: Receiver<DebouncedEvent>,
+  pub recver: Receiver<DebouncedEvent>,
   watcher_map: HashMap<String, RecommendedWatcher>,
 }
 
@@ -16,7 +16,7 @@ impl FileWatcher {
     // make channels for sending events
     let (tx, rx) = channel();
     // create watcher to watch the changes of files
-    let mut watcher = watcher(tx, Duration::from_secs(10)).unwrap();
+    let mut watcher = watcher(tx, Duration::from_secs(2)).unwrap();
     watcher.watch(&file_path[..], RecursiveMode::Recursive).unwrap();
     let mut watcher_map = HashMap::new();
     watcher_map.insert(file_path, watcher);
