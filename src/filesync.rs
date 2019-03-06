@@ -3,8 +3,8 @@ use std::path::Path;
 
 pub struct FileSync {
   dst_ip: Ipv4Addr,
-  dst_file_path: Path,
-  src_file_path: Path,
+  dst_dir_path: Path,
+  src_dir_path: Path,
 }
 
 impl FileSync {
@@ -15,5 +15,10 @@ impl FileSync {
       dst_file_path,
       src_file_path,
     }
+  }
+
+  /// Transfer file_name from local to dst dir
+  fn update(file_name: String) {
+    
   }
 }

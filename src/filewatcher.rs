@@ -20,7 +20,6 @@ impl FileWatcher {
     watcher.watch(&file_path[..], RecursiveMode::Recursive).unwrap();
     let mut watcher_map = HashMap::new();
     watcher_map.insert(file_path, watcher);
-    // return rx to recv the events
     FileWatcher {
       recver: rx,
       watcher_map: watcher_map,
