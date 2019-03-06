@@ -8,21 +8,19 @@ use std::path::Path;
 
 pub struct FileWatcher {
   pub recver: Receiver<DebouncedEvent>,
-  watcher_map: HashMap<String, RecommendedWatcher>,
+  watcher: RecommendedWatcher,
 }
 
 impl FileWatcher {
-  pub fn new(file_path: String) -> FileWatcher {
+  pub fn new(file_path: &str) -> FileWatcher {
     // make channels for sending events
     let (tx, rx) = channel();
     // create watcher to watch the changes of files
     let mut watcher = watcher(tx, Duration::from_secs(2)).unwrap();
-    watcher.watch(&file_path[..], RecursiveMode::Recursive).unwrap();
-    let mut watcher_map = HashMap::new();
-    watcher_map.insert(file_path, watcher);
+    watcher.watch(file_path, RecursiveMode::Recursive).unwrap();
     FileWatcher {
       recver: rx,
-      watcher_map: watcher_map,
+      watcher,
     }
   }
 }
