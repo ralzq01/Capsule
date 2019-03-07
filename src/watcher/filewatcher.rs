@@ -5,6 +5,8 @@ use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 use std::collections::HashMap;
 
+use crate::watcher::base::MyWatcher;
+
 pub struct FileWatcher<'a> {
   filepath: &'a str,
   watcher: RecommendedWatcher,
@@ -27,8 +29,9 @@ impl<'a> FileWatcher<'a> {
   }
 }
 
-//impl<'a> Watcher for FileWatcher<'a> {
-//  fn run(&self) -> Receiver<DebouncedEvent> {
-//    self.recver
-//  }
-//}
+impl<'a> MyWatcher for FileWatcher<'a> {
+  fn get(&self) -> String {
+    // not implemented yet
+    String::from("not implemented yet")
+  }
+}
