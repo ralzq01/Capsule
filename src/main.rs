@@ -3,13 +3,11 @@ pub mod filewatcher;
 
 use std::collections::HashMap;
 use crate::filewatcher::FileWatcher;
-use std::path::Path;
 use ini::Ini;
 
 fn main() {
   let config = read_config();
-  let path = Path::new(config.get("filepath").unwrap());
-  let watchers = FileWatcher::new(path.to_str().unwrap());
+  let watchers = FileWatcher::new(&config);
   loop {
     match watchers.recver.recv() {
       Ok(event) => println!("{:?}", event),
