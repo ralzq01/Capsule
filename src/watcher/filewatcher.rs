@@ -5,13 +5,14 @@ use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 use std::collections::HashMap;
 
-pub struct FileWatcher {
-  pub recver: Receiver<DebouncedEvent>,
+pub struct FileWatcher<'a> {
+  filepath: &'a str,
   watcher: RecommendedWatcher,
+  pub recver: Receiver<DebouncedEvent>,
 }
 
-impl FileWatcher {
-  pub fn new(config: &HashMap<String, String>) -> FileWatcher {
+impl<'a> FileWatcher<'a> {
+  pub fn new(config: &'a HashMap<String, String>) -> FileWatcher<'a> {
     // make channels for sending events
     let (tx, rx) = channel();
     // create watcher to watch the changes of files
@@ -19,8 +20,15 @@ impl FileWatcher {
     let filepath = config.get("filepath").unwrap();
     watcher.watch(filepath, RecursiveMode::Recursive).unwrap();
     FileWatcher {
-      recver: rx,
+      filepath: filepath,
       watcher: watcher,
+      recver: rx,
     }
   }
 }
+
+//impl<'a> Watcher for FileWatcher<'a> {
+//  fn run(&self) -> Receiver<DebouncedEvent> {
+//    self.recver
+//  }
+//}

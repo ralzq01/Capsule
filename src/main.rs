@@ -1,9 +1,8 @@
-extern crate ini;
-pub mod filewatcher;
-
 use std::collections::HashMap;
-use crate::filewatcher::FileWatcher;
 use ini::Ini;
+
+mod watcher;
+use crate::watcher::filewatcher::FileWatcher;
 
 fn main() {
   let config = read_config();

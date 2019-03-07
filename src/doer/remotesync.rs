@@ -10,11 +10,11 @@ pub struct RemoteSync<'a> {
   remote_dir: &'a Path,
   local_dir: &'a Path,
   tcp_conn: TcpStream,
-  sess: mut Session,
+  sess: Session,
 }
 
 impl RemoteSync<'a> {
-  fn new(config: &'a HashMap<String, String>) -> FileSync {
+  pub fn new(config: &'a HashMap<String, String>) -> FileSync {
     let ip_port = ip: config.get("remote_ip_port").unwrap();
     let user = config.get("user").unwrap();
     let password = config.get("password").unwrap();
@@ -33,14 +33,14 @@ impl RemoteSync<'a> {
 
   /// connect to the remote device
   /// should be called befor every sync operation
-  fn connect(self) {
+  pub fn connect(self) {
     self.sess.handshake(&self.tcp).unwrap();
     self.sess.userauth_password(self.user, self.password);
     assert!(self.sess.authenticated());
   }
 
   /// Transfer file_name from local to dst dir
-  fn update(file_name: String) {
+  pub fn update(file_name: String) {
     
   }
 }
