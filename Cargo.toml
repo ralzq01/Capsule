@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 notify = "4.0.0"
 rust-ini = "0.13.0"
+ssh2 = "0.3.3"
