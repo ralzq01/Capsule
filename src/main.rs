@@ -8,8 +8,6 @@ use ini::Ini;
 
 fn main() {
   let config = read_config();
-  //let path = String::from("./");
-  //let watchers = FileWatcher::new(path);
   let path = Path::new(config.get("filepath").unwrap());
   let watchers = FileWatcher::new(path.to_str().unwrap());
   loop {
@@ -30,21 +28,12 @@ fn read_config() -> HashMap<String, String> {
                  .get("type").unwrap();
   config.insert("Do".to_string(), doer.clone());
   // get watcher type
-  let watcher_type = conf.section(Some(watcher.clone())).unwrap();
-  // setup watcher value
-  if watcher.trim() == "FileWatcher" {
-    config.insert(
-      "filepath".to_string(),
-      watcher_type.get("filepath").unwrap().clone(),
-    );
-    config.insert(
-      "recursive".to_string(),
-      watcher_type.get("recursive").unwrap().clone(),
-    );
-    config.insert(
-      "ignore".to_string(),
-      watcher_type.get("ignore").unwrap().clone(),
-    );
-  }
+  let watcher_map = conf.section(Some(watcher.clone())).unwrap();
+  // merge watcher reference map section
+  config.extend(watcher_map.into_iter().map(|(k, v)| (k.clone(), v.clone())));
+  // get doer type
+  let doer_map = conf.section(Some(doer.clone())).unwrap();
+  // merge reference doer map section
+  config.extend(doer_map.into_iter().map(|(k, v)| (k.clone(), v.clone())));
   config
 }
