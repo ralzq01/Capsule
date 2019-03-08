@@ -2,16 +2,15 @@ use std::collections::HashMap;
 use ini::Ini;
 
 mod watcher;
+use crate::watcher::base::MyWatcher;
 use crate::watcher::filewatcher::FileWatcher;
 
 fn main() {
   let config = read_config();
-  let watchers = FileWatcher::new(&config);
+  let watcher = FileWatcher::new(&config);
   loop {
-    match watchers.recver.recv() {
-      Ok(event) => println!("{:?}", event),
-      Err(e) => println!("watch error: {:?}", e),
-    }
+    let modified = watcher.get();
+    println!("{}", modified);
   }
 }
 

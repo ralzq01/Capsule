@@ -30,8 +30,54 @@ impl<'a> FileWatcher<'a> {
 }
 
 impl<'a> MyWatcher for FileWatcher<'a> {
+  /// will return a String
+  /// format: type:filepath(absolute)
   fn get(&self) -> String {
-    // not implemented yet
-    String::from("not implemented yet")
+    loop {
+      if let Ok(event) = self.recver.recv() {
+        //println!("{:?}", event);
+        match event {
+          DebouncedEvent::Create(path) => {
+            // this check is due to some bugs in notify:
+            // if a file created by vs-code and then deleted without
+            // any write, notify will generate a create event for the 
+            // delete operation
+            if path.is_file() {
+              let mut res = String::from("Create:");
+              res.push_str(path.to_str().unwrap());
+              return res;
+            } else {
+              let mut res = String::from("Remove:");
+              res.push_str(path.to_str().unwrap());
+              return res;
+            }
+          },
+          DebouncedEvent::Write(path) => {
+            if path.is_file() {
+              let mut res = String::from("Write:");
+              res.push_str(path.to_str().unwrap());
+              return res;
+            }
+          },
+          DebouncedEvent::Remove(path) => {
+            let mut res = String::from("Remove:");
+            res.push_str(path.to_str().unwrap());
+            return res;
+          },
+          DebouncedEvent::Rename(orig_path, new_path) => {
+            let mut res = String::from("Rename:");
+            res.push_str(orig_path.to_str().unwrap());
+            res.push_str(";");
+            res.push_str(new_path.to_str().unwrap());
+            return res
+          },
+          _ => {
+            continue;
+          }
+        }
+      } else {
+        return String::from("Error:Detect A Error");
+      }
+    }
   }
 }
