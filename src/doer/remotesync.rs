@@ -3,6 +3,8 @@ use std::net::TcpStream;
 use ssh2::Session;
 use std::collections::HashMap;
 
+use crate::doer::base::MyDoer;
+
 pub struct RemoteSync<'a> {
   ip_port: &'a str,
   user: &'a str,
@@ -13,7 +15,7 @@ pub struct RemoteSync<'a> {
   sess: Session,
 }
 
-impl RemoteSync<'a> {
+impl<'a> RemoteSync<'a> {
   pub fn new(config: &'a HashMap<String, String>) -> FileSync {
     let ip_port = ip: config.get("remote_ip_port").unwrap();
     let user = config.get("user").unwrap();
@@ -42,5 +44,12 @@ impl RemoteSync<'a> {
   /// Transfer file_name from local to dst dir
   pub fn update(file_name: String) {
     
+  }
+}
+
+impl<'a> MyDoer for RemoteSync {
+  pub fn get(&self, event: String) -> Result<_, String> {
+    println!("Remote Sync get event: {}", &event);
+    Ok()
   }
 }
