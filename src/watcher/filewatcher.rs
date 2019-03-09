@@ -1,6 +1,8 @@
 extern crate notify;
+extern crate serde_json;
 
 use notify::{Watcher, RecursiveMode, watcher, RecommendedWatcher, DebouncedEvent};
+use serde_json::json;
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 use std::collections::HashMap;
@@ -18,7 +20,11 @@ impl<'a> FileWatcher<'a> {
     // make channels for sending events
     let (tx, rx) = channel();
     // create watcher to watch the changes of files
-    let mut watcher = watcher(tx, Duration::from_secs(2)).unwrap();
+    let check_interval = config.get("check_interval_sec")
+                         .unwrap()
+                         .parse::<u64>()
+                         .unwrap();
+    let mut watcher = watcher(tx, Duration::from_secs(check_interval)).unwrap();
     let filepath = config.get("filepath").unwrap();
     watcher.watch(filepath, RecursiveMode::Recursive).unwrap();
     FileWatcher {
@@ -31,9 +37,18 @@ impl<'a> FileWatcher<'a> {
 
 impl<'a> MyWatcher for FileWatcher<'a> {
   /// will return a String
-  /// format: type:filepath(absolute)
+  /// format: json
+  /// {
+  ///   "event": "FileWatcher" -- every watcher should specify this
+  ///   "type": "Create" / "Write" / "Remove" / "Rename" / "Error",
+  ///   "new": "path/to/the/changed(new)/file"
+  ///   "old": "path/to/the/old//file" -- the file should be removed
+  /// }
   fn get(&self) -> String {
     loop {
+      let mut watcher_type = String::from("");
+      let mut new = String::from("");
+      let mut old = String::from("");
       if let Ok(event) = self.recver.recv() {
         //println!("{:?}", event);
         match event {
@@ -43,41 +58,42 @@ impl<'a> MyWatcher for FileWatcher<'a> {
             // any write, notify will generate a create event for the 
             // delete operation
             if path.is_file() {
-              let mut res = String::from("Create:");
-              res.push_str(path.to_str().unwrap());
-              return res;
+              watcher_type.push_str("Create");
+              new.push_str(path.to_str().unwrap());
             } else {
-              let mut res = String::from("Remove:");
-              res.push_str(path.to_str().unwrap());
-              return res;
+              watcher_type.push_str("Remove");
+              old.push_str(path.to_str().unwrap());
             }
           },
           DebouncedEvent::Write(path) => {
             if path.is_file() {
-              let mut res = String::from("Write:");
-              res.push_str(path.to_str().unwrap());
-              return res;
+              watcher_type.push_str("Write");
+              new.push_str(path.to_str().unwrap());
             }
           },
           DebouncedEvent::Remove(path) => {
-            let mut res = String::from("Remove:");
-            res.push_str(path.to_str().unwrap());
-            return res;
+            watcher_type.push_str("Remove");
+            old.push_str(path.to_str().unwrap());
           },
           DebouncedEvent::Rename(orig_path, new_path) => {
-            let mut res = String::from("Rename:");
-            res.push_str(orig_path.to_str().unwrap());
-            res.push_str(";");
-            res.push_str(new_path.to_str().unwrap());
-            return res
+            watcher_type.push_str("Rename");
+            new.push_str(new_path.to_str().unwrap());
+            old.push_str(orig_path.to_str().unwrap());
           },
           _ => {
             continue;
           }
         }
       } else {
-        return String::from("Error:Detect A Error");
+        watcher_type.push_str("Error");
       }
+      let out = json!({
+        "event": "FileWatcher",
+        "type": watcher_type,
+        "new": new,
+        "old": old,
+      });
+      return out.to_string();
     }
   }
 }
