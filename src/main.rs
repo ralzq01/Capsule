@@ -12,9 +12,11 @@ use crate::doer::remotesync::RemoteSync;
 fn main() {
   let config = read_config();
   let watcher = FileWatcher::new(&config);
+  let doer = RemoteSync::new(&config);
   loop {
     let modified = watcher.get();
-    println!("{}", modified);
+    println!("{}", &modified);
+    let res = doer.get(modified);
   }
 }
 

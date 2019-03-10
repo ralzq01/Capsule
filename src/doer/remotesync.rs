@@ -3,7 +3,7 @@ extern crate serde_json;
 use std::net::TcpStream;
 use std::io::prelude::*;
 use ssh2::Session;
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
 use std::fs;
@@ -18,7 +18,7 @@ pub struct RemoteSync<'a> {
   remote_dir: &'a str,
   local_dir: &'a str,
   tcp_conn: TcpStream,
-  //sess: Session,
+  sess: Session,
 }
 
 impl<'a> RemoteSync<'a> {
@@ -27,13 +27,12 @@ impl<'a> RemoteSync<'a> {
     let user = config.get("user").unwrap();
     let password = config.get("password").unwrap();
     let tcp_conn = TcpStream::connect(&ip_port).unwrap();
-    //let mut sess = Session::new().unwrap();
-    //// connect to the remote
-    //sess.handshake(&tcp_conn).unwrap();
-    //sess.userauth_password(user, password).expect(
-    //  "Cannot connect to the remote server address."
-    //);
-    //assert!(sess.authenticated());
+    let mut sess = Session::new().unwrap();
+    sess.handshake(&tcp_conn).unwrap();
+    sess.userauth_password(user, password).expect(
+      "Cannot connect to the remote server address."
+    );
+    assert!(sess.authenticated());
     RemoteSync {
       ip_port: ip_port,
       user: user,
@@ -41,19 +40,8 @@ impl<'a> RemoteSync<'a> {
       remote_dir: config.get("remote_dir").unwrap(),
       local_dir: config.get("local_dir").unwrap(),
       tcp_conn: tcp_conn,
-      //sess: sess,
+      sess: sess,
     }
-  }
-
-  fn connect(&self) -> Session {
-    //let tcp_conn = TcpStream::connect(self.ip_port).unwrap();
-    let mut sess = Session::new().unwrap();
-    sess.handshake(&self.tcp_conn).unwrap();
-    sess.userauth_password(self.user, self.password).expect(
-      "Cannot connect to the remote server address."
-    );
-    assert!(sess.authenticated());
-    sess
   }
 
   /// This will extract the last filename for a path
@@ -78,6 +66,10 @@ impl<'a> RemoteSync<'a> {
   /// e.g. filepath: "/path/to/local/dir_name/dir1/file1.rs"
   /// e.g. output should be: "/path/to/remote/dir_name/dir1/file1.rs"
   fn to_remote_filepath(&self, filepath: &str) -> String {
+    // if filepath is empty, will return empty
+    if filepath == "" {
+      return String::from("");
+    }
     let remote_base = RemoteSync::get_basename(self.remote_dir).unwrap();
     let filepath = str::replace(filepath, "\\", "/");
     let mut pieces= filepath.rsplit(remote_base);
@@ -94,8 +86,7 @@ impl<'a> RemoteSync<'a> {
   /// Basic operations: run a bash cmd in remote
   /// return a cmd output result in OkText
   pub fn run_cmd(&self, cmd: &str) -> Status {
-    let sess = self.connect();
-    let mut channel = sess.channel_session().unwrap();
+    let mut channel = self.sess.channel_session().unwrap();
     channel.exec(cmd).expect(
       "running command fails"
     );
@@ -106,16 +97,15 @@ impl<'a> RemoteSync<'a> {
 
   /// Basic operations: send file to the remote
   /// e.g. local_filepath = "aaa/bbb/cc" or "aa\bdd\cc"
-  /// e.g. remote_path = "file/dir" or "file\dir\"
-  /// e.g. the result will put the file "cc" into remote_path: "file/dir/cc"
-  fn send_file(&self, local_file_path: &str, remote_path: &str) -> Status {
-    let sess = self.connect();
+  /// e.g. remote_path = "file/dir/dd" or "file\dir\dd"
+  /// e.g. the result will put the file content "cc" into remote_path: "file/dir/dd"
+  fn send_file(&self, local_file_path: &str, remote_file_path: &str) -> Status {
     let contents = fs::read_to_string(local_file_path)
         .expect(format!("can't read from {}", local_file_path).as_str());
-    let basename = RemoteSync::get_basename(local_file_path).unwrap();
-    let remote_file_path = Path::new(remote_path).join(Path::new(basename));
+    let parent_dir = Path::new(remote_file_path).parent().unwrap();
+    self.run_cmd(format!("mkdir -p {}", parent_dir.to_str().unwrap()).as_str());
     let lens = contents.len() as u64;
-    let mut remote_file = sess.scp_send(&remote_file_path,
+    let mut remote_file = self.sess.scp_send(Path::new(remote_file_path),
                                         0o644, lens, None).expect("create file failed");
     remote_file.write(contents.as_bytes()).expect("send file fail");
     Status::OkNone
@@ -139,7 +129,7 @@ impl<'a> RemoteSync<'a> {
   /// Basic operations: remove filename in the remote dir
   /// e.g. remote_path = "path/to/dir" or "path/to/file.txt"
   /// e.g. remove all the file (and dirs recursively) under remote_path
-  fn remov_file(&self, file_path: &str, is_recursive: bool) -> Status {
+  fn remove_file(&self, file_path: &str, is_recursive: bool) -> Status {
     let mut cmd = format!("rm ");
     if is_recursive {
       cmd.push_str("-r ");
@@ -167,117 +157,21 @@ impl<'a> MyDoer for RemoteSync<'a> {
   fn get(&self, input: String) -> Status {
     let event: Value = serde_json::from_str(&input).unwrap();
     if event["event"] == "FileWatcher" {
-      if event["type"] == "Create" {
-        //self.send_file()
+      let local_new_file = event["new"].as_str().unwrap();
+      let remote_new_file = self.to_remote_filepath(local_new_file);
+      let remote_old_file = self.to_remote_filepath(event["old"].as_str().unwrap());
+      let event_type = event["type"].as_str().unwrap();
+      if event_type == "Create" || event_type == "Write" {
+        return self.send_file(local_new_file, &remote_new_file);    
+      } else if event_type == "Rename" {
+        return self.rename_file(&remote_old_file, &remote_new_file);
+      } else if event_type == "Remove" {
+        return self.remove_file(&remote_old_file, true);
       }
     } else {
-      println!("Currently RemoteSync only supports FileWatcher");
       Status::Error("Currently Only support FileWatcher".to_string());
     }
-
     Status::OkNone
   }
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  fn construct_hashmap() -> HashMap<String, String> {
-    let mut hm = HashMap::new();
-    hm.insert(
-      String::from("remote_ip_port"),
-      String::from("xxx.xxx.xxx.xx:22")
-    );
-    hm.insert(
-      String::from("user"),
-      String::from("xxxx")
-    );
-    hm.insert(
-      String::from("password"),
-      String::from("xxxx")
-    );
-    hm.insert(
-      String::from("remote_dir"),
-      String::from("/home/zhiqilin/test1")
-    );
-    hm.insert(
-      String::from("local_dir"),
-      String::from("C::\\Users\\zhiqilin\\test1\\")
-    );
-    hm
-  }
-
-  #[test]
-  fn test_password_connect() {
-    let hm = construct_hashmap();
-    let syncer = RemoteSync::new(&hm);
-    syncer.connect();
-  }
-
-  #[test]
-  fn test_upload_files() {
-    let hm = construct_hashmap();
-    let syncer = RemoteSync::new(&hm);
-    let res = syncer.send_file("./README.md", "/home/v-zhilin/");
-    match res {
-      Status::OkNone => return,
-      _ => panic!()
-    }
-  }
-
-  #[test]
-  fn test_run_cmd() {
-    let hm = construct_hashmap();
-    let syncer = RemoteSync::new(&hm);
-    let res = syncer.run_cmd("echo aaabc");
-    match res {
-      Status::OkText(text) => {
-        assert_eq!(text.as_str(), "aaabc\n");
-      },
-      _ => panic!("Can't recv returned message")
-    }
-  }
-
-  #[test]
-  fn test_get_basename() {
-    let res = RemoteSync::get_basename("/path/test/test1.txt").unwrap();
-    assert_eq!(res, "test1.txt");
-    let res = RemoteSync::get_basename("c:\\Users\\abs\\test2.txt").unwrap();
-    assert_eq!(res, "test2.txt");
-    let res = RemoteSync::get_basename("/path/test_dir/").unwrap();
-    assert_eq!(res, "test_dir");
-    let res = RemoteSync::get_basename("/path/test_dir2/  ").unwrap();
-    assert_eq!(res, "test_dir2");
-  }
-
-  #[test]
-  fn test_to_remote_filepath() {
-    let hm = construct_hashmap();
-    let syncer = RemoteSync::new(&hm);
-    let res = syncer.to_remote_filepath("C:\\Users\\zhiqilin\\test1\\test\\abc.txt");
-    assert_eq!(res, "/home/zhiqilin/test1/test/abc.txt")
-  }
-
-  #[test]
-  fn test_rename_file() {
-    let hm = construct_hashmap();
-    let syncer = RemoteSync::new(&hm);
-    let res = syncer.rename_file("~/README.md", "~/README.md1");
-    match res {
-      Status::OkNone => return,
-      _ => panic!()
-    }
-  }
-
-  #[test]
-  fn test_remove_file() {
-    let hm = construct_hashmap();
-    let syncer = RemoteSync::new(&hm);
-    let res = syncer.remov_file("~/README.md1", true);
-    match res {
-      Status::OkNone => return,
-      _ => panic!()
-    }
-  }
-}
