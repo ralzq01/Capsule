@@ -22,7 +22,7 @@ WatcherDo is implemented by Rust. This is currently in MVP(Minium Viable Product
   ```
   to start the application!
 
-* Or you can directly get the pre-released executable program from here. And place the `config.ini` file in same place the downloaded program
+* Or you can directly get the pre-released executable program from here. And place the `config.ini` file in same place where the downloaded program are.
 
 
 ## Features
