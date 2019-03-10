@@ -5,6 +5,10 @@ mod watcher;
 use crate::watcher::base::MyWatcher;
 use crate::watcher::filewatcher::FileWatcher;
 
+mod doer;
+use crate::doer::base::MyDoer;
+use crate::doer::remotesync::RemoteSync;
+
 fn main() {
   let config = read_config();
   let watcher = FileWatcher::new(&config);

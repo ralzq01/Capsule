@@ -1,2 +1,2 @@
 pub mod remotesync;
-pub mode base;
+pub mod base;
