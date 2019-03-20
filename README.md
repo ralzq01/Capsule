@@ -33,7 +33,7 @@ WatcherDo is implemented by Rust. This is currently in MVP(Minium Viable Product
 
   FileWatcher is mainly used to detect file changes (write, create, rename, remove). In `config.ini` there will be some attributes you should specify:
 
-  * `filepath` : specify the directory you want to watch. Should use **Absolute Path**
+  * `filepath` : specify the directory you want to watch. Should use **Absolute Path** (if you in Windows filesystem, please make sure use `\\` as splitter instead of single `\`)
   * `recursive` : whether to detect folders' change recursivly.
   * `check_interval_secs`: in which interval seconds will the FileWatcher check the changed events
   * `ignore`: ignored filename or directory (**currently not support**)
@@ -47,8 +47,7 @@ WatcherDo is implemented by Rust. This is currently in MVP(Minium Viable Product
   * `remote_ip_port`: the ssh connect ip-port, usually the port should be 22.
   * `user`: the user name
   * `password`: the password. (currently only support connect with password.)
-  * `remote_dir`: the remote directory you want to sync. Should use **Absolute Path**, and should have common file directory at the end of `FileWatcher:filepath`
-  * `local_dir`: not in use yet.
+  * `remote_dir`: the remote directory you want to sync. Should use **Absolute Path**
 
 * SendEmail
 

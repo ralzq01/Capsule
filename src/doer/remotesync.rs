@@ -16,7 +16,6 @@ pub struct RemoteSync<'a> {
   user: &'a str,
   password: &'a str,
   remote_dir: &'a str,
-  local_dir: &'a str,
   tcp_conn: TcpStream,
   sess: Session,
 }
@@ -32,13 +31,13 @@ impl<'a> RemoteSync<'a> {
     sess.userauth_password(user, password).expect(
       "Cannot connect to the remote server address."
     );
+    println!("Successfully connect to server");
     assert!(sess.authenticated());
     RemoteSync {
       ip_port: ip_port,
       user: user,
       password: password,
       remote_dir: config.get("remote_dir").unwrap(),
-      local_dir: config.get("local_dir").unwrap(),
       tcp_conn: tcp_conn,
       sess: sess,
     }
@@ -61,26 +60,20 @@ impl<'a> RemoteSync<'a> {
 
   /// This will generate correct filepath for basic operations
   /// e.g. self.remote_dir = "/path/to/remote/dir_name"
-  /// e.g. self.local_dir = "/path/to/local/dir_name"
-  /// e.g.     where "dir_name" should be same
-  /// e.g. filepath: "/path/to/local/dir_name/dir1/file1.rs"
-  /// e.g. output should be: "/path/to/remote/dir_name/dir1/file1.rs"
+  /// e.g. filepath (should be relavant path): "this/is/a/file"
+  /// e.g. output should be (directly join): "/path/to/remote/dir_name/this/is/a/file"
   fn to_remote_filepath(&self, filepath: &str) -> String {
     // if filepath is empty, will return empty
     if filepath == "" {
-      return String::from("");
+      return String::from(self.remote_dir);
     }
-    let remote_base = RemoteSync::get_basename(self.remote_dir).unwrap();
-    let filepath = str::replace(filepath, "\\", "/");
-    let mut pieces= filepath.rsplit(remote_base);
-    match pieces.next() {
-      Some(p) => {
-        let joint = Path::new(self.remote_dir).join(&p[1..]);
-        let joint = joint.to_str().unwrap();
-        return str::replace(joint, "\\", "/").to_string();
-      },
-      _ => String::from("Can't solve the path")
+    if Path::new(filepath).is_absolute() {
+      panic!("Unexpected Error: Path shold not be absolute");
     }
+    let remote_path = Path::new(self.remote_dir);
+    let remote_filepath = remote_path.join(filepath);
+    let remote_filepath = remote_filepath.to_str().unwrap();
+    str::replace(remote_filepath, "\\", "/").to_string()
   }
 
   /// Basic operations: run a bash cmd in remote
@@ -108,6 +101,7 @@ impl<'a> RemoteSync<'a> {
     let mut remote_file = self.sess.scp_send(Path::new(remote_file_path),
                                         0o644, lens, None).expect("create file failed");
     remote_file.write(contents.as_bytes()).expect("send file fail");
+    println!("Update files on remote: {}", remote_file_path);
     Status::OkNone
   }
 
@@ -116,6 +110,7 @@ impl<'a> RemoteSync<'a> {
   /// e.g. new_filename = "path/2/to/new.txt"
   /// e.g. the result will be: "path/1/to/old.txt" renamed to "path/2/to/new.txt"
   fn rename_file(&self, old_filepath: &str, new_filepath: &str) -> Status {
+    println!("rename remote file '{}' => '{}'", old_filepath, new_filepath);
     let cmd = format!("mv {} {}", 
                       old_filepath,
                       new_filepath);
@@ -130,6 +125,7 @@ impl<'a> RemoteSync<'a> {
   /// e.g. remote_path = "path/to/dir" or "path/to/file.txt"
   /// e.g. remove all the file (and dirs recursively) under remote_path
   fn remove_file(&self, file_path: &str, is_recursive: bool) -> Status {
+    println!("remove remote file: {}", file_path);
     let mut cmd = format!("rm ");
     if is_recursive {
       cmd.push_str("-r ");
@@ -157,12 +153,12 @@ impl<'a> MyDoer for RemoteSync<'a> {
   fn get(&self, input: String) -> Status {
     let event: Value = serde_json::from_str(&input).unwrap();
     if event["event"] == "FileWatcher" {
-      let local_new_file = event["new"].as_str().unwrap();
-      let remote_new_file = self.to_remote_filepath(local_new_file);
+      let remote_new_file = self.to_remote_filepath(event["new"].as_str().unwrap());
       let remote_old_file = self.to_remote_filepath(event["old"].as_str().unwrap());
+      let local_newfile_abspath = event["abspath"].as_str().unwrap();
       let event_type = event["type"].as_str().unwrap();
       if event_type == "Create" || event_type == "Write" {
-        return self.send_file(local_new_file, &remote_new_file);    
+        return self.send_file(local_newfile_abspath, &remote_new_file);    
       } else if event_type == "Rename" {
         return self.rename_file(&remote_old_file, &remote_new_file);
       } else if event_type == "Remove" {

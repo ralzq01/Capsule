@@ -6,7 +6,7 @@ use crate::watcher::base::MyWatcher;
 use crate::watcher::filewatcher::FileWatcher;
 
 mod doer;
-use crate::doer::base::MyDoer;
+use crate::doer::base::{MyDoer, Status};
 use crate::doer::remotesync::RemoteSync;
 
 fn main() {
@@ -17,6 +17,10 @@ fn main() {
     let modified = watcher.get();
     println!("{}", &modified);
     let res = doer.get(modified);
+
+    if let Status::Error(msg) = res {
+      println!("An Error Occured: {}", msg);
+    }
   }
 }
 
