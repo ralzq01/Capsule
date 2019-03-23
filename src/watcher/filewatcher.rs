@@ -12,6 +12,7 @@ use crate::watcher::base::MyWatcher;
 
 pub struct FileWatcher<'a> {
   filepath: &'a str,
+  ignore_file: &'a str,
   watcher: RecommendedWatcher,
   pub recver: Receiver<DebouncedEvent>,
 }
@@ -27,10 +28,12 @@ impl<'a> FileWatcher<'a> {
                          .unwrap();
     let mut watcher = watcher(tx, Duration::from_secs(check_interval)).unwrap();
     let filepath = config.get("filepath").expect("Error: Please fill the filepath section in FileWatcher");
+    let ignore_file = config.get("ignore").expect("Error: Ignore file should be specified with `None` or filename");
     println!("start watching file dir: {}", filepath);
     watcher.watch(filepath, RecursiveMode::Recursive).expect("Error: Can't watch this dir");
     FileWatcher {
       filepath: filepath,
+      ignore_file: ignore_file,
       watcher: watcher,
       recver: rx,
     }
@@ -103,6 +106,12 @@ impl<'a> MyWatcher for FileWatcher<'a> {
         }
       } else {
         watcher_type.push_str("Error");
+      }
+      if self.ignore_file != "None" {
+        // ignore_file will be ignored
+        if new.contains(self.ignore_file) {
+          continue;
+        }
       }
       let out = json!({
         "event": "FileWatcher",

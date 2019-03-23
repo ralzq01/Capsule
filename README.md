@@ -36,7 +36,7 @@ WatcherDo is implemented by Rust. This is currently in MVP(Minium Viable Product
   * `filepath` : specify the directory you want to watch. Should use **Absolute Path** (if you in Windows filesystem, please make sure use `\\` as splitter instead of single `\`)
   * `recursive` : whether to detect folders' change recursivly.
   * `check_interval_secs`: in which interval seconds will the FileWatcher check the changed events
-  * `ignore`: ignored filename or directory (**currently not support**)
+  * `ignore`: `None` denotes any file updates will be detected. If you want some files won't be detected, specify a name and FileWatcher will ignore all file change events where the file name appears (So if you specify `abc` then all the relevant filepath which includes `abs` won't be detected, such as `this/file/absds` or `this/abs/aaa` of `this/file/abs`).
 
 ### Doer
 
