@@ -49,9 +49,15 @@ WatcherDo is implemented by Rust. This is currently in MVP(Minium Viable Product
   * `password`: the password. (currently only support connect with password.)
   * `remote_dir`: the remote directory you want to sync. Should use **Absolute Path**
 
-* SendEmail
+* EmailSender
 
-  Under Development.
+  EmailSender is mainly used for sending emails. **Currently only Support Outlook Smtp**.
+
+  * `sender`: the sender mail address. Should be xxx@outlook.com
+  * `recver`: the recver mail address.
+  * `password`: sender mail account password.
+  * `subject`: mail subject.
+  * `content`: mail content. __TODO: contents of '{}' will be replaced by the input of the Watcher__
 
 ## Running the test
 
