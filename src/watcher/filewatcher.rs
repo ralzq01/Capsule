@@ -67,7 +67,7 @@ impl<'a> MyWatcher for FileWatcher<'a> {
             // delete operation
             let rpath = path.strip_prefix(self.filepath)
                 .expect("Unexpected Error: Can't get relevant filepath");
-            if path.is_file() {
+            if path.is_file() || path.is_dir() {
               watcher_type.push_str("Create");
               new.push_str(rpath.to_str().unwrap());
               abspath.push_str(path.to_str().unwrap());
@@ -83,6 +83,9 @@ impl<'a> MyWatcher for FileWatcher<'a> {
               watcher_type.push_str("Write");
               new.push_str(rpath.to_str().unwrap());
               abspath.push_str(path.to_str().unwrap());
+            } else {
+              // folder root will changed when create a new file under this folder. ignore.
+              continue;
             }
           },
           DebouncedEvent::Remove(path) => {
@@ -90,6 +93,7 @@ impl<'a> MyWatcher for FileWatcher<'a> {
                 .expect("Unexpected Error: Can't get relevant filepath");
             watcher_type.push_str("Remove");
             old.push_str(rpath.to_str().unwrap());
+            abspath.push_str(path.to_str().unwrap());
           },
           DebouncedEvent::Rename(orig_path, new_path) => {
             let orig_rpath = orig_path.strip_prefix(self.filepath)
