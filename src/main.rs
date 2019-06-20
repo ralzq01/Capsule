@@ -8,25 +8,27 @@ use crate::watcher::filewatcher::FileWatcher;
 mod doer;
 use crate::doer::base::{MyDoer, Status};
 use crate::doer::remotesync::RemoteSync;
+use crate::doer::emailsender::EmailSender;
 
 fn main() {
   let config = read_config();
   let watcher = FileWatcher::new(&config);
-  let doer = RemoteSync::new(&config);
+  //let doer = RemoteSync::new(&config);
+  let doer = EmailSender::new(&config);
   loop {
     let modified = watcher.get();
     println!("{}", &modified);
     let res = doer.get(modified);
 
-    if let Status::Error(msg) = res {
-      println!("An Error Occured: {}", msg);
-    }
+    //if let Status::Error(msg) = res {
+    //  println!("An Error Occured: {}", msg);
+    //}
   }
 }
 
 fn read_config() -> HashMap<String, String> {
   let mut config = HashMap::new();
-  let conf = Ini::load_from_file("config.ini").unwrap();
+  let conf = Ini::load_from_file("config.ini.test").unwrap();
   let watcher = conf.section(Some("Watcher".to_owned())).unwrap()
                     .get("type").unwrap();
   config.insert("Watcher".to_string(), watcher.clone());

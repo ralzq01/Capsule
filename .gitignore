@@ -1,4 +1,4 @@
 /target
 **/*.rs.bk
 config.ini.test
-rust_test
+test
