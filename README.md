@@ -1,18 +1,18 @@
-# WatcherDo
+# Capasule
 
-A two phase trigger where a watcher is watching something (like file change, website change), and a doer will do something (like remote sync, send email) accroding to the watcher's detected events.
+A two phase trigger where a watcher watches the changes and a doer reacts to the changes.
 
-## Getting Start
+## Getting Started
 
-WatcherDo is implemented by Rust. This is currently in MVP(Minium Viable Product) stage. Since Rust is a cross-platform language, this product can be used in all mainstream OS (MacOS, Linux, Unix, Windows)
+Capsule is implemented by Rust. It is currently in MVP(Minium Viable Product) stage. Since Rust is a cross-platform language, this product can be used in all mainstream OS (MacOS, Linux, Unix, Windows)
 
-### Prerequests
+### Prerequisites
 
 * If you are going to build this project from source, you should have Rust environments, which includes `rustc` and `cargo`.
 
 ### Installing
 
-* From Source: Under watcherdo/
+* From Source: Under Capsule/
   ```
   $ cargo build --release
   ```
@@ -22,7 +22,7 @@ WatcherDo is implemented by Rust. This is currently in MVP(Minium Viable Product
   ```
   to start the application!
 
-* Or you can directly get the pre-released executable program from [here](https://github.com/ralzq01/watcherdo/tree/master/release). And place the `config.ini` file in same place where the downloaded program are.
+* Or you can directly get the pre-released executable program from [here](https://github.com/ralzq01/Capsule/tree/master/release). And place the `config.ini` file in same place where the downloaded program are.
 
 
 ## Features
@@ -83,7 +83,7 @@ When contributing to this repository, please first discuss the change you wish t
 
 ## Architecture
 
-Watcher - Pipe (under development) - Doer
+Watcher - Doer
 
-The output of the watcher will server as the input for the Doer.
+The output of the watcher will serve as the input for the Doer.
 
