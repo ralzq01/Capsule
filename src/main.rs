@@ -62,7 +62,7 @@ fn main() {
 
 fn read_config() -> HashMap<String, String> {
   let mut config = HashMap::new();
-  let conf = Ini::load_from_file("config.ini.test").unwrap();
+  let conf = Ini::load_from_file("config.ini").unwrap();
   let watcher = conf.section(Some("Watcher".to_owned())).unwrap()
                     .get("type").unwrap();
   config.insert("Watcher".to_string(), watcher.clone());
